@@ -134,15 +134,11 @@ class RawDataLoader:
                 df.columns = df.columns.str.replace('_cell_mut', '')
                 df.columns = df.columns.str.replace('_cell_CN', '')
                 df.columns = df.columns.str.replace('_cell_exp', '')
-                # df = df.dropna(axis=1)
-
-                # Note that drug_comp raw table has some NA values so we should impute it
-                # if any(df.isna()):
-                #     df = pd.DataFrame(SimpleImputer(strategy='mean').fit_transform(df),
-                #                       columns=df.columns).set_index(df.index)
-
+                if any(df.isna()):
+                    df = pd.DataFrame(SimpleImputer(strategy='mean').fit_transform(df),
+                                      columns=df.columns).set_index(df.index)
                 # df = (df - df.min()) / (df.max() - df.min())
-                df = df.fillna(0)
+                # df = df.fillna(0)
 
                 print("has null:")
                 print(df.isnull().sum().sum())

@@ -342,24 +342,27 @@ def run(k, is_test=False):
 
     # Step 2: Load training data
     train_data, train_drug_screen = RawDataLoader.load_data(data_modalities=DATA_MODALITIES,
-                                                            raw_file_directory="../" + RAW_BOTH_DATA_FOLDER,
-                                                            screen_file_directory="../" + BOTH_SCREENING_DATA_FOLDER,
-                                                            drug_directory="../" + DRUG_DATA_FOLDER,
+                                                            raw_file_directory= RAW_BOTH_DATA_FOLDER,
+                                                            screen_file_directory= BOTH_SCREENING_DATA_FOLDER,
+                                                            drug_directory= DRUG_DATA_FOLDER,
                                                             sep="\t")
+
+
+
 
     # Step 3: Load test data if applicable
     if is_test:
         test_data, test_drug_screen = RawDataLoader.load_data(data_modalities=DATA_MODALITIES,
-                                                              raw_file_directory="../" +CCLE_RAW_DATA_FOLDER,
-                                                              screen_file_directory="../" +CCLE_SCREENING_DATA_FOLDER,
+                                                              raw_file_directory=CCLE_RAW_DATA_FOLDER,
+                                                              screen_file_directory=CCLE_SCREENING_DATA_FOLDER,
                                                               sep="\t",
-                                                              drug_directory="../" +DRUG_DATA_FOLDER
+                                                              drug_directory=DRUG_DATA_FOLDER
                                                               )
         train_data, test_data = RawDataLoader.data_features_intersect(train_data, test_data)
 
         data = combine_test_train(train_data, test_data)
-        build_similarity_matrices(data, "../" + SIM_DATA_FOLDER)
-        similarity_dict = load_sim_files(DATA_MODALITIES, "../" + SIM_DATA_FOLDER)
+        build_similarity_matrices(data, SIM_DATA_FOLDER)
+        similarity_dict = load_sim_files(DATA_MODALITIES, SIM_DATA_FOLDER)
         train_sim, test_sim = separate_sim(similarity_dict)
 
         x_cell_train, x_drug_train, y_train, cell_sizes, drug_sizes = RawDataLoader.prepare_input_data(train_sim,
@@ -367,10 +370,17 @@ def run(k, is_test=False):
         x_cell_test, x_drug_test, y_test, cell_sizes, drug_sizes = RawDataLoader.prepare_input_data(test_sim,
                                                                                                     test_drug_screen)
     else:
-        build_similarity_matrices(train_data, "../" + SIM_DATA_FOLDER)
-        similarity_dict = load_sim_files(DATA_MODALITIES, "../" + SIM_DATA_FOLDER)
+        build_similarity_matrices(train_data, SIM_DATA_FOLDER)
+        similarity_dict = load_sim_files(DATA_MODALITIES, SIM_DATA_FOLDER)
         x_cell_train, x_drug_train, y_train, cell_sizes, drug_sizes = RawDataLoader.prepare_input_data(similarity_dict,
                                                                                                        train_drug_screen)
+    rus = RandomUnderSampler(sampling_strategy="majority", random_state=RANDOM_SEED)
+    dataset = pd.concat([x_cell_train, x_drug_train], axis=1)
+    dataset.index = x_cell_train.index
+    dataset, y_train = rus.fit_resample(dataset, y_train)
+    x_cell_train = dataset.iloc[:, :sum(cell_sizes)]
+    x_drug_train = dataset.iloc[:, sum(cell_sizes):]
+
 
     # Step 5: Loop over k runs
     for i in range(k):
